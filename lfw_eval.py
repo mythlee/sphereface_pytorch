@@ -32,11 +32,12 @@ def alignment(src_img,src_pts):
 
 def KFold(n=6000, n_folds=10, shuffle=False):
     folds = []
-    base = list(range(n))
+    base = [k for k in range(n)]
+    
     for i in range(n_folds):
-        test = base[i*n/n_folds:(i+1)*n/n_folds]
+        test = base[i*n//n_folds: (i+1)*n//n_folds]
         train = list(set(base)-set(test))
-        folds.append([train,test])
+        folds.append([train, test])
     return folds
 
 def eval_acc(threshold, diff):
@@ -64,8 +65,8 @@ def find_best_threshold(thresholds, predicts):
 
 parser = argparse.ArgumentParser(description='PyTorch sphereface lfw')
 parser.add_argument('--net','-n', default='sphere20a', type=str)
-parser.add_argument('--lfw', default='../../dataset/face/lfw/lfw.zip', type=str)
-parser.add_argument('--model','-m', default='sphere20a.pth', type=str)
+parser.add_argument('--lfw', default='./data/lfw/lfw.zip', type=str)
+parser.add_argument('--model','-m', default='./model/sphere20a_20171020.pth', type=str)
 args = parser.parse_args()
 
 predicts=[]
@@ -118,11 +119,13 @@ for i in range(6000):
 
 accuracy = []
 thd = []
-folds = KFold(n=6000, n_folds=10, shuffle=False)
+predicts = list(map(lambda line:line.strip('\n').split(), predicts))
+folds = KFold(n=len(predicts), n_folds=10, shuffle=False)
 thresholds = np.arange(-1.0, 1.0, 0.005)
-predicts = np.array(map(lambda line:line.strip('\n').split(), predicts))
 for idx, (train, test) in enumerate(folds):
-    best_thresh = find_best_threshold(thresholds, predicts[train])
-    accuracy.append(eval_acc(best_thresh, predicts[test]))
+    t1 = [predicts[k] for k in train]
+    best_thresh = find_best_threshold(thresholds, t1)
+    t2 = [predicts[k] for k in test]
+    accuracy.append(eval_acc(best_thresh, t2))
     thd.append(best_thresh)
 print('LFWACC={:.4f} std={:.4f} thd={:.4f}'.format(np.mean(accuracy), np.std(accuracy), np.mean(thd)))
